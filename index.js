@@ -19,15 +19,15 @@ app.listen(port, () => {
 });
 
 const AllSessionsObject = {};
-const client = new Client();
-// const client = new Client({
-//   puppeteer: {
-//     headless: false, //make it as true when running on AWS EC2
-//   },
-//   authStrategy: new LocalAuth({
-//     clientId: 'YOUR_CLIENT_ID',
-//   }),
-// });
+//const client = new Client();
+const client = new Client({
+  puppeteer: {
+    headless: false, //make it as true when running on AWS EC2
+  },
+  authStrategy: new LocalAuth({
+    clientId: 'YOUR_CLIENT_ID',
+  }),
+});
 
 client.on('qr', (qr) => {
   qrcode.generate(qr, { small: true });
