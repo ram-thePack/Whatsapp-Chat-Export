@@ -24,7 +24,7 @@ client.on('qr', (qr) => {
 });
 
 client.on('authenticated', () => {
-  console.log('AUTHENTICATED');
+  console.log('Authenticated');
 });
 
 client.on('ready', () => {
