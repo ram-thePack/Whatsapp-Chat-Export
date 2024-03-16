@@ -32,19 +32,52 @@ client.on('ready', () => {
 });
 
 client.on('message', async (msg) => {
+  const contact_name = (await msg.getContact()).pushname;
+  const contact_info = [];
+
   let chat = await msg.getChat();
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+  //Get Links sent from user
+  let matches = [];
+  let url;
+  while ((url = urlRegex.exec(msg.body)) !== null) {
+    matches.push(url[0]);
+  }
+
+  // Get Contact Info sent from user
+  if (msg.type === 'vcard' || msg.type === 'multi_vcard') {
+    const vcards = msg.vCards;
+    vcards.forEach((vcard) => {
+      // Extract name from vCard
+      const nameMatch = vcard.match(/FN:(.*)\n/);
+      const name = nameMatch ? nameMatch[1] : '';
+
+      // Extract phone number from vCard
+      const phoneMatch = vcard.match(/TEL;.*:(.*)/);
+      const phoneNumber = phoneMatch ? phoneMatch[1] : '';
+
+      contact_info.push(name + ' ' + phoneNumber);
+    });
+  }
+
   if (chat.isGroup && chat.name.toLowerCase().includes('pack')) {
-    const date = new Date(msg.timestamp * 1000).toLocaleString();
-    console.log(chat.name);
-    console.log(msg.author.substring(0, msg.author.length - 5));
-    console.log(date);
-    console.log(msg.body);
+    const localDate = new Date(msg.timestamp * 1000);
+    const offset = localDate.getTimezoneOffset() * 60000;
+    const localDateTime = new Date(localDate.getTime() - offset);
+    const formattedDate = localDateTime
+      .toISOString()
+      .slice(0, 19)
+      .replace('T', ' ');
 
     const data = {
       GroupName: chat.name,
       Phone: msg.author.substring(0, msg.author.length - 5),
       Message: msg.body,
-      CreatedDate: date,
+      CreatedDate: formattedDate,
+      UserName: contact_name,
+      Links: matches.length > 0 ? matches : null,
+      V4CardInfo: contact_info.length > 0 ? contact_info : null,
     };
 
     update.insertData(data, (err, results) => {
