@@ -31,6 +31,60 @@ client.on('ready', () => {
   console.log('Client is ready!');
 });
 
+const groupNames = new Map();
+
+// Function to fetch group name
+const getGroupName = async (groupId) => {
+  if (groupNames.has(groupId)) {
+    return groupNames.get(groupId);
+  } else {
+    // Fetch the group name from WhatsApp Web
+    //console.log('inside else', groupId);
+    const chat1 = await client.getChatById(groupId);
+    //console.log(chat1.name);
+    const groupName = chat1 ? chat1.name : 'Unknown Group';
+    groupNames.set(groupId, groupName);
+    return groupName;
+  }
+};
+
+client.on('group_join', async (notification) => {
+  // User has joined or been added to the group.
+  const groupName = await getGroupName(notification.chatId);
+  if (groupName.toLowerCase().includes('pack')) {
+    console.log(
+      'User joined group:',
+      groupName,
+      ' Phone: ',
+      notification.id.participant.substring(0, 12),
+    );
+
+    const data = {
+      GroupName: groupName,
+      Phone: notification.id.participant.substring(0, 12),
+      Type: 'Joined',
+      Date: new Date(),
+    };
+
+    update.insertData('GroupStats', data, (err, results) => {
+      if (err) {
+        console.error('Error inserting data:', err);
+        return;
+      }
+      console.log('Data inserted successfully:', results);
+    });
+  }
+});
+
+client.on('group_leave', async (notification) => {
+  // User has left or been kicked from the group.
+  console.log('LEAVE', notification);
+  const groupName = await getGroupName(notification.chatId);
+  if (groupName.toLowerCase().includes('pack')) {
+    console.log('User left group:', groupName);
+  }
+});
+
 client.on('message', async (msg) => {
   const contact_name = (await msg.getContact()).pushname;
   const contact_info = [];
@@ -74,13 +128,13 @@ client.on('message', async (msg) => {
       GroupName: chat.name,
       Phone: msg.author.substring(0, msg.author.length - 5),
       Message: msg.body,
-      CreatedDate: formattedDate,
+      CreatedDate: new Date(),
       UserName: contact_name,
       Links: matches.length > 0 ? matches : null,
       V4CardInfo: contact_info.length > 0 ? contact_info : null,
     };
 
-    update.insertData(data, (err, results) => {
+    update.insertData('WhatsAppExport', data, (err, results) => {
       if (err) {
         console.error('Error inserting data:', err);
         return;
