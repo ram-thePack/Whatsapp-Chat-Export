@@ -52,12 +52,12 @@ client.on('group_join', async (notification) => {
   // User has joined or been added to the group.
   const groupName = await getGroupName(notification.chatId);
   if (groupName.toLowerCase().includes('pack')) {
-    console.log(
-      'User joined group:',
-      groupName,
-      ' Phone: ',
-      notification.id.participant.substring(0, 12),
-    );
+    // console.log(
+    //   'User joined group:',
+    //   groupName,
+    //   ' Phone: ',
+    //   notification.id.participant.substring(0, 12),
+    // );
 
     const data = {
       GroupName: groupName,
@@ -78,10 +78,24 @@ client.on('group_join', async (notification) => {
 
 client.on('group_leave', async (notification) => {
   // User has left or been kicked from the group.
-  console.log('LEAVE', notification);
+  //console.log('LEAVE', notification);
   const groupName = await getGroupName(notification.chatId);
   if (groupName.toLowerCase().includes('pack')) {
-    console.log('User left group:', groupName);
+    const data = {
+      GroupName: groupName,
+      Phone: notification.id.participant.substring(0, 12),
+      Type: 'Left',
+      Date: new Date(),
+    };
+
+    update.insertData('GroupStats', data, (err, results) => {
+      if (err) {
+        console.error('Error inserting data:', err);
+        return;
+      }
+      console.log('Data inserted successfully:', results);
+    });
+    //console.log('User left group:', groupName);
   }
 });
 
