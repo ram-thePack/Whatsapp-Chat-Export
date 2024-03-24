@@ -2,6 +2,7 @@ const update = require('./update');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const express = require('express');
+
 const app = express();
 const port = 3000;
 
@@ -49,8 +50,10 @@ const getGroupName = async (groupId) => {
 };
 
 client.on('group_join', async (notification) => {
+  //console.log(notification);
   // User has joined or been added to the group.
   const groupName = await getGroupName(notification.chatId);
+  //console.log(groupName);
   if (groupName.toLowerCase().includes('pack')) {
     // console.log(
     //   'User joined group:',
@@ -77,9 +80,11 @@ client.on('group_join', async (notification) => {
 });
 
 client.on('group_leave', async (notification) => {
+  //console.log(notification);
   // User has left or been kicked from the group.
   //console.log('LEAVE', notification);
   const groupName = await getGroupName(notification.chatId);
+  //console.log(groupName);
   if (groupName.toLowerCase().includes('pack')) {
     const data = {
       GroupName: groupName,
@@ -104,6 +109,7 @@ client.on('message', async (msg) => {
   const contact_info = [];
 
   let chat = await msg.getChat();
+  // let msginfo = await msg.getInfo();
   const urlRegex = /(https?:\/\/[^\s]+)/g;
 
   //Get Links sent from user
@@ -129,6 +135,18 @@ client.on('message', async (msg) => {
     });
   }
 
+  // // Get read receipts for announcement group messages
+  // client.on('message_ack', async (message, ack) => {
+  //   const chat = await message.getChat();
+  //   //console.log(chat.name);
+  //   if (chat.name === 'Gsd Parents Pack12') {
+  //     console.log('inside message ack', chat.name, message.body, ack);
+  //     if (ack === '3') {
+  //       console.log('User viewed the message');
+  //     }
+  //   }
+  // });
+
   if (chat.isGroup && chat.name.toLowerCase().includes('pack')) {
     const localDate = new Date(msg.timestamp * 1000);
     const offset = localDate.getTimezoneOffset() * 60000;
@@ -138,13 +156,17 @@ client.on('message', async (msg) => {
       .slice(0, 19)
       .replace('T', ' ');
 
+    // if (chat.name === 'Gsd Parents Pack12') {
+    //   console.log('msginfo= ', msginfo);
+    // }
+
     const data = {
       GroupName: chat.name,
       Phone: msg.author.substring(0, msg.author.length - 5),
       Message: msg.body,
       CreatedDate: new Date(),
       UserName: contact_name,
-      Links: matches.length > 0 ? matches : null,
+      Links: matches.length > 0 ? matches.join(',') : null,
       V4CardInfo: contact_info.length > 0 ? contact_info : null,
     };
 
