@@ -10,6 +10,8 @@ app.listen(port, () => {
   console.log(`Server listening on the port ${port}`);
 });
 
+const wwebVersion = '2.2410.1';
+
 const client = new Client({
   puppeteer: {
     headless: true,
@@ -18,6 +20,10 @@ const client = new Client({
   authStrategy: new LocalAuth({
     clientId: 'YOUR_CLIENT_ID',
   }),
+  webVersionCache: {
+    type: 'remote',
+    remotePath: `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${wwebVersion}.html`,
+  },
 });
 
 client.on('qr', (qr) => {
