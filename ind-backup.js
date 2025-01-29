@@ -10,37 +10,37 @@ app.listen(port, () => {
   console.log(`Server listening on the port ${port}`);
 });
 
+const wwebVersion = '2.2409.2';
+
 const client = new Client({
   authStrategy: new LocalAuth({
-    clientId: 'YOUR_CLIENT_ID',
+    dataPath: './.ww',
   }),
   puppeteer: {
     headless: true,
     args: ['--no-sandbox', '--disable-gpu'],
   },
+  webVersion: '2.2409.2',
+  webVersionCache: {
+    type: 'remote',
+    remotePath:
+      'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2409.2.html',
+  },
+  // authStrategy: new LocalAuth({
+  //   clientId: 'YOUR_CLIENT_ID',
+  // }),
+  // webVersionCache: {
+  //   type: 'remote',
+  //   remotePath: `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${wwebVersion}.html`,
+  // },
 });
 
 client.on('qr', (qr) => {
-  console.log('Generating QR code');
   qrcode.generate(qr, { small: true });
 });
 
-console.log('After QR');
-
-client.on('authenticated', (msg) => {
-  console.log('Authenticated', msg);
-});
-
-client.on('auth_failure', (msg) => {
-  console.error('AUTHENTICATION FAILURE', msg);
-});
-
-client.on('disconnected', (reason) => {
-  console.log('Client was logged out', reason);
-});
-
-client.on('change_state', (reason) => {
-  console.log('Client state was changed: ', reason);
+client.on('authenticated', () => {
+  console.log('Authenticated');
 });
 
 client.on('ready', async () => {
@@ -48,42 +48,9 @@ client.on('ready', async () => {
 
   const chats = await client.getChats();
   const groups = chats.filter((chat) => chat.isGroup);
-  if (groups.length == 0) {
-    console.log('You have no group yet.');
-  } else {
-    let groupsMsg = '*All active groups listed below:*\n\n';
-    groups.forEach((group, i) => {
-      groupsMsg += `ID: ${group.id._serialized}\nName: ${group.name}\n\n`;
-    });
-    console.log(groupsMsg);
-  }
 
-  // Example: Adding a participant to the first group in the list
-  const groupToEdit = groups[1]; // Selecting the first group
-  const participantId = '919632310910@c.us'; // Participant's phone number (include country code)
-
-  try {
-    await groupToEdit.addParticipants([participantId]);
-    console.log(`Participant added to group: ${groupToEdit.name}`);
-  } catch (error) {
-    console.log(`Failed to add participant: ${error.message}`);
-  }
+  console.log('Groups:', groups);
 });
-
-// client.getChats().then(async (chats) => {
-//   const groups = chats.filter((chat) => !chat.isReadOnly && chat.isGroup);
-//   if (groups.length == 0) {
-//     console.log('You have no group yet.');
-//   } else {
-//     let groupsMsg = '*All active groups listed below:*\n\n';
-//     groups.forEach((group, i) => {
-//       groupsMsg += `ID: ${group.id._serialized}\nName: ${group.name}\n\n`;
-//     });
-//     console.log(groupsMsg);
-//   }
-// });
-
-client.initialize();
 
 const groupNames = new Map();
 
@@ -103,9 +70,18 @@ const getGroupName = async (groupId) => {
 };
 
 client.on('group_join', async (notification) => {
+  //console.log(notification);
   // User has joined or been added to the group.
   const groupName = await getGroupName(notification.chatId);
+  //console.log(groupName);
   if (groupName.toLowerCase().includes('pack')) {
+    // console.log(
+    //   'User joined group:',
+    //   groupName,
+    //   ' Phone: ',
+    //   notification.id.participant.substring(0, 12),
+    // );
+
     const data = {
       GroupName: groupName,
       Phone: notification.id.participant.substring(0, 12),
@@ -113,19 +89,22 @@ client.on('group_join', async (notification) => {
       Date: new Date(),
     };
 
-    update.insertData('GroupStats', data, (err, results) => {
-      if (err) {
-        console.error('Error inserting data:', err);
-        return;
-      }
-      console.log('Data inserted successfully:', results);
-    });
+    // update.insertData('GroupStats', data, (err, results) => {
+    //   if (err) {
+    //     console.error('Error inserting data:', err);
+    //     return;
+    //   }
+    //   console.log('Data inserted successfully:', results);
+    // });
   }
 });
 
 client.on('group_leave', async (notification) => {
+  //console.log(notification);
   // User has left or been kicked from the group.
+  //console.log('LEAVE', notification);
   const groupName = await getGroupName(notification.chatId);
+  //console.log(groupName);
   if (groupName.toLowerCase().includes('pack')) {
     const data = {
       GroupName: groupName,
@@ -134,13 +113,14 @@ client.on('group_leave', async (notification) => {
       Date: new Date(),
     };
 
-    update.insertData('GroupStats', data, (err, results) => {
-      if (err) {
-        console.error('Error inserting data:', err);
-        return;
-      }
-      console.log('Data inserted successfully:', results);
-    });
+    // update.insertData('GroupStats', data, (err, results) => {
+    //   if (err) {
+    //     console.error('Error inserting data:', err);
+    //     return;
+    //   }
+    //   console.log('Data inserted successfully:', results);
+    // });
+    //console.log('User left group:', groupName);
   }
 });
 
@@ -177,6 +157,18 @@ client.on('message', async (msg) => {
     });
   }
 
+  // // Get read receipts for announcement group messages
+  // client.on('message_ack', async (message, ack) => {
+  //   const chat = await message.getChat();
+  //   //console.log(chat.name);
+  //   if (chat.name === 'Gsd Parents Pack12') {
+  //     console.log('inside message ack', chat.name, message.body, ack);
+  //     if (ack === '3') {
+  //       console.log('User viewed the message');
+  //     }
+  //   }
+  // });
+
   if (chat.isGroup && chat.name.toLowerCase().includes('pack')) {
     const localDate = new Date(msg.timestamp * 1000);
     const offset = localDate.getTimezoneOffset() * 60000;
@@ -186,6 +178,11 @@ client.on('message', async (msg) => {
       .slice(0, 19)
       .replace('T', ' ');
 
+    // if (chat.name === 'Gsd Parents Pack12') {
+    //   console.log('msginfo= ', msginfo);
+    // }
+
+    console.log(contact_info.join());
     const data = {
       GroupName: chat.name,
       Phone: msg.author.substring(0, msg.author.length - 5),
@@ -197,13 +194,15 @@ client.on('message', async (msg) => {
     };
 
     if (msg.body.length >= 0 || matches.length > 0 || contact_info.length > 0) {
-      update.insertData('WhatsAppExport', data, (err, results) => {
-        if (err) {
-          console.error('Error inserting data:', err);
-          return;
-        }
-        console.log('Data inserted successfully:', results);
-      });
+      // update.insertData('WhatsAppExport', data, (err, results) => {
+      //   if (err) {
+      //     console.error('Error inserting data:', err);
+      //     return;
+      //   }
+      //   console.log('Data inserted successfully:', results);
+      // });
     }
   }
 });
+
+client.initialize();

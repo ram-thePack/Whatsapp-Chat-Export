@@ -2,6 +2,8 @@ const update = require('./update');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const express = require('express');
+const axios = require('axios');
+require('dotenv').config();
 
 const app = express();
 const port = 3000;
@@ -9,6 +11,8 @@ const port = 3000;
 app.listen(port, () => {
   console.log(`Server listening on the port ${port}`);
 });
+
+//const wwebVersion = '2.2412.54';
 
 const client = new Client({
   authStrategy: new LocalAuth({
@@ -18,6 +22,19 @@ const client = new Client({
     headless: true,
     args: ['--no-sandbox', '--disable-gpu'],
   },
+  //webVersion: '2.2409.4-beta',
+  //webVersionCache: {
+  // type: 'remote',
+  // remotePath:'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2409.4-beta.html',
+  // 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2409.2.html',
+  //},
+  // authStrategy: new LocalAuth({
+  //   clientId: 'YOUR_CLIENT_ID',
+  // }),
+  // webVersionCache: {
+  //   type: 'remote',
+  //   remotePath: `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${wwebVersion}.html`,
+  // },
 });
 
 client.on('qr', (qr) => {
@@ -36,52 +53,29 @@ client.on('auth_failure', (msg) => {
 });
 
 client.on('disconnected', (reason) => {
+  sendEmail();
   console.log('Client was logged out', reason);
 });
 
-client.on('change_state', (reason) => {
-  console.log('Client state was changed: ', reason);
-});
-
-client.on('ready', async () => {
+client.on('ready', () => {
   console.log('Client is ready!');
-
-  const chats = await client.getChats();
-  const groups = chats.filter((chat) => chat.isGroup);
-  if (groups.length == 0) {
-    console.log('You have no group yet.');
-  } else {
-    let groupsMsg = '*All active groups listed below:*\n\n';
-    groups.forEach((group, i) => {
-      groupsMsg += `ID: ${group.id._serialized}\nName: ${group.name}\n\n`;
-    });
-    console.log(groupsMsg);
-  }
-
-  // Example: Adding a participant to the first group in the list
-  const groupToEdit = groups[1]; // Selecting the first group
-  const participantId = '919632310910@c.us'; // Participant's phone number (include country code)
-
-  try {
-    await groupToEdit.addParticipants([participantId]);
-    console.log(`Participant added to group: ${groupToEdit.name}`);
-  } catch (error) {
-    console.log(`Failed to add participant: ${error.message}`);
-  }
 });
 
-// client.getChats().then(async (chats) => {
-//   const groups = chats.filter((chat) => !chat.isReadOnly && chat.isGroup);
-//   if (groups.length == 0) {
-//     console.log('You have no group yet.');
-//   } else {
-//     let groupsMsg = '*All active groups listed below:*\n\n';
-//     groups.forEach((group, i) => {
-//       groupsMsg += `ID: ${group.id._serialized}\nName: ${group.name}\n\n`;
-//     });
-//     console.log(groupsMsg);
-//   }
-// });
+process.on('uncaughtException', (error, origin) => {
+  sendEmail();
+  console.log('----- Uncaught exception -----');
+  console.log(error);
+  console.log('----- Exception origin -----');
+  console.log(origin);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  sendEmail();
+  console.log('----- Unhandled Rejection at -----');
+  console.log(promise);
+  console.log('----- Reason -----');
+  console.log(reason);
+});
 
 client.initialize();
 
@@ -103,9 +97,18 @@ const getGroupName = async (groupId) => {
 };
 
 client.on('group_join', async (notification) => {
+  //console.log(notification);
   // User has joined or been added to the group.
   const groupName = await getGroupName(notification.chatId);
+  //console.log(groupName);
   if (groupName.toLowerCase().includes('pack')) {
+    // console.log(
+    //   'User joined group:',
+    //   groupName,
+    //   ' Phone: ',
+    //   notification.id.participant.substring(0, 12),
+    // );
+
     const data = {
       GroupName: groupName,
       Phone: notification.id.participant.substring(0, 12),
@@ -124,8 +127,11 @@ client.on('group_join', async (notification) => {
 });
 
 client.on('group_leave', async (notification) => {
+  //console.log(notification);
   // User has left or been kicked from the group.
+  //console.log('LEAVE', notification);
   const groupName = await getGroupName(notification.chatId);
+  //console.log(groupName);
   if (groupName.toLowerCase().includes('pack')) {
     const data = {
       GroupName: groupName,
@@ -141,6 +147,7 @@ client.on('group_leave', async (notification) => {
       }
       console.log('Data inserted successfully:', results);
     });
+    //console.log('User left group:', groupName);
   }
 });
 
@@ -177,6 +184,18 @@ client.on('message', async (msg) => {
     });
   }
 
+  // // Get read receipts for announcement group messages
+  // client.on('message_ack', async (message, ack) => {
+  //   const chat = await message.getChat();
+  //   //console.log(chat.name);
+  //   if (chat.name === 'Gsd Parents Pack12') {
+  //     console.log('inside message ack', chat.name, message.body, ack);
+  //     if (ack === '3') {
+  //       console.log('User viewed the message');
+  //     }
+  //   }
+  // });
+
   if (chat.isGroup && chat.name.toLowerCase().includes('pack')) {
     const localDate = new Date(msg.timestamp * 1000);
     const offset = localDate.getTimezoneOffset() * 60000;
@@ -185,6 +204,10 @@ client.on('message', async (msg) => {
       .toISOString()
       .slice(0, 19)
       .replace('T', ' ');
+
+    // if (chat.name === 'Gsd Parents Pack12') {
+    //   console.log('msginfo= ', msginfo);
+    // }
 
     const data = {
       GroupName: chat.name,
@@ -196,6 +219,15 @@ client.on('message', async (msg) => {
       V4CardInfo: contact_info.length > 0 ? contact_info.join() : null,
     };
 
+    //if (matches.length > 0 || contact_info.length > 0) {
+    //     update.insertData('WhatsAppExport', data, (err, results) => {
+    //   if (err) {
+    //        console.error('Error inserting data:', err);
+    //      return;
+    // }
+    //        console.log('Data inserted successfully:', results);
+    //  });
+    // }
     if (msg.body.length >= 0 || matches.length > 0 || contact_info.length > 0) {
       update.insertData('WhatsAppExport', data, (err, results) => {
         if (err) {
@@ -206,4 +238,86 @@ client.on('message', async (msg) => {
       });
     }
   }
+});
+
+//client.initialize();
+
+app.get('/get-groups', async (req, res) => {
+  //console.log('inside get-groups');
+  try {
+    const chats = await client.getChats();
+    const groups = chats.filter((chat) => chat.isGroup);
+    if (groups.length === 0) {
+      res.status(404).send('No groups found.');
+    } else {
+      const groupList = groups
+        .filter((group) => group.name.toLowerCase().includes('pack'))
+        .map((group) => ({
+          id: group.id._serialized,
+          name: group.name,
+        }));
+
+      //   const groupList = groups.map((group) => ({
+      //     id: group.id._serialized,
+      //     name: group.name,
+      //   }));
+      res.json(groupList);
+    }
+  } catch (error) {
+    console.error('Error fetching groups:', error);
+    res.status(500).send('An error occurred while fetching groups.');
+  }
+});
+
+// Endpoint to add a user to a specific group
+app.post('/add-to-group', express.json(), async (req, res) => {
+  const { groupId, phoneNumber } = req.body;
+
+  if (!groupId || !phoneNumber) {
+    return res.status(400).send('groupId and phoneNumber are required.');
+  }
+
+  try {
+    const chat = await client.getChatById(groupId);
+    await chat.addParticipants([`${phoneNumber}@c.us`]);
+    res.send(`User ${phoneNumber} added to group ${chat.name}.`);
+  } catch (error) {
+    console.error('Error adding participant:', error);
+    res.status(500).send(`Failed to add participant: ${error.message}`);
+  }
+});
+
+//Send alert email
+async function sendBubbleApiRequest(payload) {
+  try {
+    const response = await axios.post(process.env.BUBBLE_API_URL, payload, {
+      headers: {
+        Authorization: `Bearer ${process.env.BUBBLE_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Bubble API Error:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+    throw error;
+  }
+}
+
+async function sendEmail(emailData) {
+  try {
+    const result = await sendBubbleApiRequest(emailData);
+    console.log('Email sent via Bubble API:', result);
+    return result;
+  } catch (error) {
+    console.error('Failed to send email:', error);
+  }
+}
+
+sendEmail({
+  email: 'tech@thepack.in,shobhit@thepack.in',
 });

@@ -2,3 +2,6 @@
 .wweb*
 node_modules
 .env
+.ww*
+session
+*.zip
