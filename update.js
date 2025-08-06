@@ -26,3 +26,32 @@ module.exports.insertData = function (tableName, newData, callback) {
     });
   });
 };
+
+module.exports.insertBatchData = function (tableName, batchData) {
+  if (batchData.length === 0) return;
+
+  dbUtils.pool.getConnection((err, connection) => {
+    if (err) {
+      console.error('Error getting connection from pool:', err);
+      return;
+    }
+
+    const keys = Object.keys(batchData[0]);
+    const values = batchData.map((row) => keys.map((k) => row[k]));
+    const placeholders = values
+      .map(() => `(${keys.map(() => '?').join(',')})`)
+      .join(',');
+    const sqlquery = `INSERT INTO ${tableName} (${keys.join(
+      ',',
+    )}) VALUES ${placeholders}`;
+
+    connection.query(sqlquery, values.flat(), (insertErr, results) => {
+      connection.release();
+      if (insertErr) {
+        console.error('Batch insert error:', insertErr);
+      } else {
+        console.log(`Batch inserted ${results.affectedRows} rows`);
+      }
+    });
+  });
+};
