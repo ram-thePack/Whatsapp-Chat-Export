@@ -172,8 +172,10 @@ client.on('message', async (msg) => {
   }
 
   //Quert to KAi
-  console.log(chat.name.toLowerCase());
-  if (chat.name.toLowerCase() == 'testing pack') {
+  if (
+    chat.name.toLowerCase() == 'testing pack' ||
+    chat.name.toLowerCase() == 'community moderation'
+  ) {
     if (msg.body.toLowerCase().includes('@askkai')) {
       console.log('Query to KAi received, Query= ' + msg.body);
       const isNutrition = false;
@@ -196,7 +198,6 @@ client.on('message', async (msg) => {
 
           // 3. Reply only if data found
           if (repMsg && repMsg !== '') {
-            console.log('in IF');
             userChat = 'User: ' + message + '\nBot: ' + repMsg;
             msg.reply(
               `${repMsg}\n\nFor more information, [click here](https://wa.me/917760400141/?text=Hi%20Kai)`,
@@ -218,7 +219,6 @@ client.on('message', async (msg) => {
               console.log('Data inserted successfully:', results);
             });
           } else {
-            console.log('in else');
             const data = {
               UserName: contact_name,
               Phone: msg?.author
