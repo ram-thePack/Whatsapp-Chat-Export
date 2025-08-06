@@ -43,7 +43,7 @@ const client = new Client({
 setInterval(() => {
   if (messageQueue.length > 0) {
     const batch = messageQueue.splice(0, messageQueue.length);
-    insertBatchData('WhatsAppExport', batch);
+    update.insertBatchData('WhatsAppExport', batch);
   }
 }, BATCH_INTERVAL);
 

@@ -23,7 +23,7 @@ module.exports.sendBubbleApiRequest = async function (payload) {
 
 module.exports.sendEmail = async function (emailData) {
   try {
-    const result = await sendBubbleApiRequest(emailData);
+    const result = await this.sendBubbleApiRequest(emailData);
     console.log('Email sent via Bubble API:', result);
     return result;
   } catch (error) {
@@ -57,7 +57,7 @@ module.exports.triggerAlertMessage = async function (payload) {
 
 module.exports.sendAlert = async function (emailData) {
   try {
-    const result = await triggerAlertMessage(emailData);
+    const result = await this.triggerAlertMessage(emailData);
     console.log('Message Alert sent via Bubble API:', result);
     return result;
   } catch (error) {
