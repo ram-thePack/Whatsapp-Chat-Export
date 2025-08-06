@@ -219,6 +219,7 @@ client.on('message', async (msg) => {
               console.log('Data inserted successfully:', results);
             });
           } else {
+            userChat = 'User: ' + message;
             const data = {
               UserName: contact_name,
               Phone: msg?.author
@@ -228,7 +229,6 @@ client.on('message', async (msg) => {
               FailedQuestions: ingredients,
               Source: 'WAGS',
             };
-            userChat = 'User: ' + message;
 
             update.insertData('KaiChatLogs', data, (err, results) => {
               if (err) {
@@ -301,13 +301,14 @@ client.on('message', async (msg) => {
     };
 
     if (msg.body.length >= 0 || matches.length > 0 || contact_info.length > 0) {
-      update.insertData('WhatsAppExport', data, (err, results) => {
-        if (err) {
-          console.error('Error inserting data:', err);
-          return;
-        }
-        console.log('Data inserted successfully:', results);
-      });
+      // Commented instant push to DB logic
+      // update.insertData('WhatsAppExport', data, (err, results) => {
+      //   if (err) {
+      //     console.error('Error inserting data:', err);
+      //     return;
+      //   }
+      //   console.log('Data inserted successfully:', results);
+      // });
       messageQueue.push(data);
     }
   }
