@@ -26,6 +26,22 @@ const safeWords = [
 const messageQueue = [];
 const BATCH_INTERVAL = 15000; // 15 seconds
 
+const formattedDate = (() => {
+  const d = new Date();
+  const offset = d.getTimezoneOffset();
+  return d.toISOString().replace(
+    'Z',
+    `${offset <= 0 ? '+' : '-'}${Math.floor(Math.abs(offset) / 60)
+      .toString()
+      .padStart(2, '0')}:${(Math.abs(offset) % 60)
+      .toString()
+      .padStart(2, '0')}`,
+  );
+})();
+
+const formattedDateSt = new Date().toISOString().split('T')[0];
+const formattedDateEd = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
 app.listen(port, () => {
   console.log(`Server listening on the port ${port}`);
 });
@@ -200,7 +216,7 @@ client.on('message', async (msg) => {
           if (repMsg && repMsg !== '') {
             userChat = 'User: ' + message + '\nBot: ' + repMsg;
             msg.reply(
-              `${repMsg}\n\nFor more information, [click here](https://wa.me/917760400141/?text=Hi%20Kai)`,
+              `${repMsg}\n\nTo know more, chat with KAi https://wa.me/917760400141/?text=Hi%20Kai`,
             );
             const data = {
               UserName: contact_name,
@@ -209,6 +225,10 @@ client.on('message', async (msg) => {
                 : '',
               Messages: userChat,
               Source: 'WAGS',
+              StartTime: formattedDate,
+              EndTime: formattedDate,
+              StartDate: formattedDateSt,
+              NewStartDate: formattedDateEd,
             };
 
             update.insertData('KaiChatLogs', data, (err, results) => {
