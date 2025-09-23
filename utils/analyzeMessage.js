@@ -30,19 +30,40 @@ Respond in JSON format with keys: is_nutrition_question (bool), ingredients (cha
     );
 
     const content = response.data.choices[0].message.content;
-    console.log(content);
+    //console.log('content:' + content);
+
     try {
-      const result = JSON.parse(content);
+      // Clean the response by removing markdown code blocks
+      let cleanedContent = content.trim();
+
+      // Remove ```json and ``` markers if present
+      if (cleanedContent.startsWith('```json')) {
+        cleanedContent = cleanedContent
+          .replace(/^```json\s*/, '')
+          .replace(/\s*```$/, '');
+      } else if (cleanedContent.startsWith('```')) {
+        cleanedContent = cleanedContent
+          .replace(/^```\s*/, '')
+          .replace(/\s*```$/, '');
+      }
+
+      const result = JSON.parse(cleanedContent);
+      //console.log('result: ' + JSON.stringify(result));
       const isNutrition = result.is_nutrition_question;
-      //const ingredients = result.ingredients;
+      //console.log(isNutrition);
+
       const ingredients = Array.isArray(result.ingredients)
         ? result.ingredients[0] || null
         : result.ingredients;
+      //console.log(ingredients);
       return { isNutrition, ingredients };
     } catch (e) {
+      console.log('JSON parsing error:', e);
+      //console.log('Cleaned content:', cleanedContent);
       return { isNutrition: false, ingredients: null };
     }
   } catch (err) {
+    console.log('API error:', err);
     return { isNutrition: false, ingredients: null };
   }
 };
