@@ -189,10 +189,8 @@ client.on('message', async (msg) => {
 
   //Quert to KAi
   if (
-    chat.name.toLowerCase() == 'testing pack' ||
     chat.name.toLowerCase() == 'community moderation' ||
-    chat.name.toLowerCase() == 'thepack.in alpha' ||
-    chat.name.toLowerCase().includes('shih tzu parents pack')
+    chat.name.toLowerCase().includes('pack')
   ) {
     if (msg.body.toLowerCase().includes('@askkai')) {
       console.log('Query to KAi received, Query= ' + msg.body);
