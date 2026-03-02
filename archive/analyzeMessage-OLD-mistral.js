@@ -11,24 +11,21 @@ Message: "${message}"
 If the input is related to fussy eating behaviour or medical issues return False.
 2. List any ingredients or food items mentioned in the message in singular tense. ex: mangoes should return mango, dehydrated apples should return apple.
 
-Respond ONLY in JSON format with keys: is_nutrition_question (bool), ingredients (string or null).
-Do not include any explanation or markdown, just the raw JSON.
+Respond in JSON format with keys: is_nutrition_question (bool), ingredients (character).
 `;
   //console.log(prompt);
   try {
     const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
+      'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: 'gpt-4o-mini',
+        model: 'meta-llama/llama-3.1-8b-instruct:free',
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0,
-        response_format: { type: 'json_object' },
-        max_tokens: 100,
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          Authorization: `Bearer ${process.env.MISTRAL7B_KEY}`,
           'Content-Type': 'application/json',
+          'HTTP-Referer': 'http://localhost:3000',
         },
       },
     );
@@ -37,8 +34,22 @@ Do not include any explanation or markdown, just the raw JSON.
     //console.log('content:' + content);
 
     try {
-      const result = JSON.parse(content); // No cleaning needed with json_object format
+      // Clean the response by removing markdown code blocks
+      let cleanedContent = content.trim();
 
+      // Remove ```json and ``` markers if present
+      if (cleanedContent.startsWith('```json')) {
+        cleanedContent = cleanedContent
+          .replace(/^```json\s*/, '')
+          .replace(/\s*```$/, '');
+      } else if (cleanedContent.startsWith('```')) {
+        cleanedContent = cleanedContent
+          .replace(/^```\s*/, '')
+          .replace(/\s*```$/, '');
+      }
+
+      const result = JSON.parse(cleanedContent);
+      //console.log('result: ' + JSON.stringify(result));
       const isNutrition = result.is_nutrition_question;
       //console.log(isNutrition);
 
@@ -53,7 +64,7 @@ Do not include any explanation or markdown, just the raw JSON.
       return { isNutrition: false, ingredients: null };
     }
   } catch (err) {
-    console.log('API error status:', err.response?.status);
+    console.log('API error:', err);
     console.log('API error data:', JSON.stringify(err.response?.data, null, 2));
     return { isNutrition: false, ingredients: null };
   }
