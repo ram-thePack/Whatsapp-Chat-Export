@@ -63,12 +63,20 @@ setInterval(() => {
   }
 }, BATCH_INTERVAL);
 
+client.on('loading_screen', (percent, message) => {
+  console.log('LOADING SCREEN', percent, message);
+});
+
 client.on('qr', (qr) => {
   console.log('Generating QR code');
   qrcode.generate(qr, { small: true });
 });
 
 console.log('After QR');
+
+client.on('code', (code) => {
+  console.log('Pairing code:', code);
+});
 
 client.on('authenticated', (msg) => {
   console.log('Authenticated', msg);
@@ -173,7 +181,19 @@ client.on('group_leave', async (notification) => {
 });
 
 client.on('message', async (msg) => {
-  const contact_name = (await msg.getContact()).pushname;
+  // const contact_name = (await msg.getContact()).pushname;
+
+  let contact_name = 'unknown';
+  let userphone = null;
+  try {
+    const contact = await msg.getContact();
+    contact_name = contact.pushname;
+    userphone = contact.number;
+  } catch (err) {
+    console.error('Failed to get contact info:', err.message);
+    userphone = msg?.author?.substring(0, 12) ?? 'unknown';
+  }
+
   const contact_info = [];
 
   let chat = await msg.getChat();
@@ -202,9 +222,8 @@ client.on('message', async (msg) => {
         const message = msg.body;
 
         // 1. Analyze the message
-        const { isNutrition, ingredients } = await analyzeMsg.analyzeMessage(
-          message,
-        );
+        const { isNutrition, ingredients } =
+          await analyzeMsg.analyzeMessage(message);
         console.log('Is Nutrition Question:', isNutrition);
         console.log('Ingredients:', ingredients);
 
@@ -220,9 +239,7 @@ client.on('message', async (msg) => {
             );
             const data = {
               UserName: contact_name,
-              Phone: msg?.author
-                ? msg.author.substring(0, msg.author.length - 5)
-                : '',
+              Phone: userphone,
               Messages: userChat,
               Source: 'WAGS',
               StartTime: formattedDate,
@@ -242,9 +259,7 @@ client.on('message', async (msg) => {
             userChat = 'User: ' + message;
             const data = {
               UserName: contact_name,
-              Phone: msg?.author
-                ? msg.author.substring(0, msg.author.length - 5)
-                : '',
+              Phone: userphone,
               Messages: userChat,
               FailedQuestions: ingredients,
               Source: 'WAGS',
@@ -312,7 +327,7 @@ client.on('message', async (msg) => {
 
     const data = {
       GroupName: chat.name,
-      Phone: msg?.author ? msg.author.substring(0, msg.author.length - 5) : '',
+      Phone: userphone,
       Message: msg.body,
       CreatedDate: new Date(),
       UserName: contact_name,
